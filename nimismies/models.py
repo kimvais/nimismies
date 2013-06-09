@@ -1,3 +1,54 @@
+#
+# -*- coding: utf-8 -*-
+#
+# Copyright © 2013 Kimmo Parviainen-Jalanko <k@77.fi>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+from django.contrib.auth.models import AbstractBaseUser
 from django.db import models
 
-# Create your models here.
+
+class User(AbstractBaseUser):
+    dn = models.CharField(max_length=1024, unique=True, db_index=True)
+    email = models.EmailField(unique=True, db_index=True)
+    USERNAME_FIELD = email
+
+    def get_full_name(self):
+        return self.dn
+
+    def get_short_name(self):
+        return self.email
+
+
+class PrivateKey(models.Model):
+    owner = models.ForeignKey('nimismies.User')
+    data = models.TextField(null=False)
+
+
+class Certificate(models.Model):
+    owner = models.ForeignKey('nimismies.User')
+    issuer = models.ForeignKey('nimismies.Certificate')
+    data = models.TextField(null=False)
+
+
+class CertificateSigningRequest(models.Model):
+    owner = models.ForeignKey('nimismies.User')
+    data = models.TextField(null=False)
+
