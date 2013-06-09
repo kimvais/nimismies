@@ -23,6 +23,7 @@
 
 from django.contrib.auth.models import AbstractBaseUser
 from django.db import models
+from . import fields
 
 
 class User(AbstractBaseUser):
@@ -39,7 +40,9 @@ class User(AbstractBaseUser):
 
 class PrivateKey(models.Model):
     owner = models.ForeignKey('nimismies.User')
-    data = models.TextField(null=False)
+    data = fields.EncryptedCharField(null=False,
+                                     passphrase_setting='SECRET_KEY',
+                                     max_length=8192)
 
 
 class Certificate(models.Model):

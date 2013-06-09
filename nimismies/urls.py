@@ -27,7 +27,9 @@ from django.conf.urls import patterns, include, url
 # from django.contrib import admin
 # admin.autodiscover()
 
-urlpatterns = patterns('',
+urlpatterns = patterns(
+    '',
+   url(r'^login', 'nimismies.views.login', name="login"),
     # Examples:
     # url(r'^$', 'nimismies.views.home', name='home'),
     # url(r'^nimismies/', include('nimismies.foo.urls')),
