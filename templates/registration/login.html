@@ -61,10 +61,10 @@
 
     <div class="container">
 
-      <form class="form-signin">
+      <form class="form-signin" method="post">
+          {% csrf_token %}
         <h2 class="form-signin-heading">Please sign in</h2>
-        <input type="text" class="input-block-level" placeholder="Email address">
-        <input type="password" class="input-block-level" placeholder="Password">
+          {{ form.as_p }}
         <label class="checkbox">
           <input type="checkbox" value="remember-me"> Remember me
         </label>

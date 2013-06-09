@@ -22,3 +22,12 @@
 # THE SOFTWARE.
 
 from django.contrib.auth.views import login
+from django.views.generic import TemplateView
+
+class Home(TemplateView):
+    template_name = "base.html"
+    def get_context_data(self, **kwargs):
+        ctx = super(TemplateView, self).get_context_data(**kwargs)
+        ctx.update(dict(app_name="Nimismies",
+                        author="Kimvais"))
+        return ctx
