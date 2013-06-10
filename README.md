@@ -1,6 +1,13 @@
 # nimismies
 
-This project aims to be easy-to-deploy certificate authority (CA) with a web based UI
+This project aims to be easy-to-deploy certificate authority (CA) with a web based UI. It will run on Django and OpenSSL (via M2Crypto)
+
+## Features
+
+* None for the time being, really
+
+In addition to the basic CA functionality (issuing Certificates!) I plan on
+adding support for OSCP, SCEP and HSMs.
 
 ## License
 
