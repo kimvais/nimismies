@@ -26,12 +26,14 @@ from django.conf.urls import patterns, include, url
 # Uncomment the next two lines to enable the admin:
 # from django.contrib import admin
 # admin.autodiscover()
+from django.views.generic import RedirectView
 from nimismies import views
 
 urlpatterns = patterns(
     '',
    url(r'^login', 'nimismies.views.login', name="login"),
     url(r'^$', views.Home.as_view(), name='home'),
+    url(r'^accounts/profile/', RedirectView.as_view(url='/')),
     # url(r'^nimismies/', include('nimismies.foo.urls')),
 
     # Uncomment the admin/doc line below to enable admin documentation:
