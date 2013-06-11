@@ -28,8 +28,14 @@ from . import fields
 
 class User(AbstractBaseUser):
     dn = models.CharField(max_length=1024, unique=True, db_index=True)
-    email = models.EmailField(unique=True, db_index=True)
-    USERNAME_FIELD = email
+    email = models.EmailField(
+        verbose_name='email address',
+        max_length=255,
+        unique=True,
+        db_index=True,
+    )
+
+    USERNAME_FIELD = 'email'
 
     def get_full_name(self):
         return self.dn
