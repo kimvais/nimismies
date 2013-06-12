@@ -21,31 +21,58 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import login, logout
+from django.contrib.auth.views import logout
 from django.core.urlresolvers import reverse
 from django.shortcuts import redirect
-from django.utils.decorators import method_decorator
-from django.views.generic import TemplateView, View
+from django.views.generic import TemplateView, View, FormView
+
+from M2Crypto import DSA, BIO
+from nimismies import forms, models
 
 
 class Home(TemplateView):
     template_name = "base.html"
+
     def get_context_data(self, **kwargs):
         ctx = super(TemplateView, self).get_context_data(**kwargs)
         ctx.update(dict(app_name="Nimismies",
                         author="Kimvais"))
         return ctx
 
-    @method_decorator(login_required)
-    def dispatch(self, request, *args, **kwargs):
-        return super(TemplateView, self).dispatch(request, *args, **kwargs)
-
 
 class LogOut(View):
-
     def get(self, request, *args, **kwargs):
         logout(request)
         return redirect(reverse('login'))
+
+
+class CreatePrivateKey(FormView):
+    form_class = forms.PrivateKey
+    template_name = 'create_private_key.html'
+    success_url = '/'
+
+    def form_valid(self, form):
+        alg = form.cleaned_data.get('key_type', 'dsa')
+        size = form.cleaned_data.get('key_size', 2048)
+        print(type(size))
+        if alg == "dsa":
+            key = DSA.gen_params(size)
+            private = BIO.MemoryBuffer()
+            public = BIO.MemoryBuffer()
+            key.gen_key()
+            key.save_key_bio(private, cipher=None)
+            key.save_pub_key_bio(public)
+            # print(public.getvalue())
+            # print(private.getvalue())
+            private_key = models.PrivateKey()
+            private_key.data = private.getvalue()
+            private_key.public_key = public.getvalue()
+            private_key.owner = self.request.user
+            private_key.bits = size
+            private_key.key_type = alg
+            private_key.save()
+        return super(FormView, self).form_valid(form)
+
+
 
 

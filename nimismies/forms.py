@@ -1,4 +1,3 @@
-#
 # -*- coding: utf-8 -*-
 #
 # Copyright © 2013 Kimmo Parviainen-Jalanko <k@77.fi>
@@ -21,30 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from django.conf.urls import patterns, include, url
+from django import forms
 
-# Uncomment the next two lines to enable the admin:
-from django.contrib import admin
-from django.contrib.auth.views import login
-from django.contrib.auth.decorators import login_required
+class PrivateKey(forms.Form):
+    key_type = forms.ChoiceField(choices=(
+        ('dsa', 'DSA'), ('rsa', 'RSA'), ('ecdsa', 'EC DSA'),),
+                                 widget=forms.RadioSelect())
 
-admin.autodiscover()
-from django.views.generic import RedirectView
-from nimismies import views
+    key_size = forms.ChoiceField(choices=(
+        (1024, '1k'), (2048, '2k'), (4096, '4k'),),
+                                 widget=forms.RadioSelect())
 
-urlpatterns = patterns(
-    '',
-    url(r'^login', login, name="login"),
-    url(r'^logout', views.LogOut.as_view(), name="logout"),
-    url(r'^$', login_required(views.Home.as_view()), name='home'),
-    url(r'^accounts/profile/', RedirectView.as_view(url='/')),
-    url(r'^create/key/', login_required(views.CreatePrivateKey.as_view()),
-        name='create_private_key'),
-    # url(r'^nimismies/', include('nimismies.foo.urls')),
-
-    # Uncomment the admin/doc line below to enable admin documentation:
-    # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
-
-    # Uncomment the next line to enable the admin:
-    url(r'^admin/', include(admin.site.urls)),
-)
+    def clean_key_size(self):
+        return int(self.data['key_size'])

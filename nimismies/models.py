@@ -69,6 +69,9 @@ class PrivateKey(models.Model):
     data = fields.EncryptedCharField(null=False,
                                      passphrase_setting='SECRET_KEY',
                                      max_length=8192)
+    public_key = models.TextField()
+    bits = models.IntegerField()
+    key_type = models.CharField(max_length=16)
 
 
 class Certificate(models.Model):

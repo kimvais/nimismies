@@ -124,7 +124,13 @@ class EncryptedCharField(models.CharField):
         kwds.pop('max_length')
         self._south_kwds = kwds
 
-    def get_prep_value(self, value):
+    def get_prep_lookup(self, lookup_type, value):
+        raise Exception('You cannot do lookups on an encrypted field.')
+
+    def get_db_prep_lookup(self, *args, **kw):
+        raise Exception('You cannot do lookups on an encrypted field.')
+
+    def get_db_prep_value(self, value, connection, prepared=False):
         """Transparently encrypt and base64 encode data"""
         if isinstance(value, EncryptedData):
             return value
@@ -132,9 +138,7 @@ class EncryptedCharField(models.CharField):
         encrypted = salt + iv + ciphertext
         encoded = b64encode(encrypted).decode('ascii')
         with_prefix = self._DB_FIELD_PREFIX + encoded
-        stored_data = super(EncryptedCharField, self).get_prep_value(
-            with_prefix)
-        return EncryptedData(stored_data)
+        return EncryptedData(with_prefix)
 
     def to_python(self, value):
         """Transparently base64 decode and decrypt data"""
