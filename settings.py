@@ -143,3 +143,5 @@ LOGGING = {
 }
 
 AUTH_USER_MODEL = 'nimismies.User'
+LOGIN_URL = '/login'
+LOGIN_REDIRECT_URL = '/'

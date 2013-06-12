@@ -21,9 +21,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from django.contrib.auth.models import AbstractBaseUser
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from . import fields
+
+
+class UserManager(BaseUserManager):
+    def create_user(self, email, dn, password=None):
+        """
+        Creates and saves a User with the given email, date of
+        birth and password.
+        """
+        if not email:
+            raise ValueError('Users must have an email address')
+
+        user = self.model(
+            email=email,
+            dn=dn,
+        )
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
 
 
 class User(AbstractBaseUser):
@@ -36,6 +54,8 @@ class User(AbstractBaseUser):
     )
 
     USERNAME_FIELD = 'email'
+    objects = UserManager()
+    is_staff = True
 
     def get_full_name(self):
         return self.dn

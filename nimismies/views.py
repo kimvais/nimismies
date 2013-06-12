@@ -21,8 +21,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from django.contrib.auth.views import login
-from django.views.generic import TemplateView
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import login, logout
+from django.core.urlresolvers import reverse
+from django.shortcuts import redirect
+from django.utils.decorators import method_decorator
+from django.views.generic import TemplateView, View
+
 
 class Home(TemplateView):
     template_name = "base.html"
@@ -31,3 +36,16 @@ class Home(TemplateView):
         ctx.update(dict(app_name="Nimismies",
                         author="Kimvais"))
         return ctx
+
+    @method_decorator(login_required)
+    def dispatch(self, request, *args, **kwargs):
+        return super(TemplateView, self).dispatch(request, *args, **kwargs)
+
+
+class LogOut(View):
+
+    def get(self, request, *args, **kwargs):
+        logout(request)
+        return redirect(reverse('login'))
+
+
