@@ -24,7 +24,7 @@
 from django.contrib.auth.views import logout
 from django.core.urlresolvers import reverse
 from django.shortcuts import redirect
-from django.views.generic import TemplateView, View, FormView
+from django.views.generic import TemplateView, View, FormView, ListView
 
 from M2Crypto import DSA, BIO
 from nimismies import forms, models
@@ -74,5 +74,28 @@ class CreatePrivateKey(FormView):
         return super(FormView, self).form_valid(form)
 
 
+class ObjectList(ListView):
+    template_name = 'list.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        self.choice = kwargs.pop('choice', None)
+        return super(ObjectList, self).dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return self.get_model_class().objects.filter(owner=self.request.user)
+
+    def get_model_class(self):
+        if self.choice == "private_key":
+            return models.PrivateKey
+        else:
+            raise RuntimeError("Unknown choice {0}".format(self.choice))
+
+    def get_context_data(self, **kwargs):
+        ctx = super(ObjectList, self).get_context_data(**kwargs)
+        ctx.update(dict(
+            app_name = "nimismies",
+            author = "Kimvais",
+            choice = self.choice
+        ))
+        return ctx
 

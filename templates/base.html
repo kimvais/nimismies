@@ -5,11 +5,7 @@
     <title>{{ app_name }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Loading Bootstrap -->
-    <link href="/static/bootstrap/css/bootstrap.css" rel="stylesheet">
-
-    <!-- Loading Flat UI -->
-    <link href="/static/css/flat-ui.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
 
     <link rel="shortcut icon" href="/static/images/favicon.ico">
 
@@ -51,32 +47,10 @@
                                         </a>
                                     </li>
                                     <li class="active">
-                                        <a href="#fakelink">
+                                        <a href="
+                                        {% url 'list' choice='private_key' %}">
                                             Private Keys
-                                            <span class="navbar-unread">1</span>
                                         </a>
-                                        <ul>
-                                            <li><a href="
-                                            {% url 'create_private_key' %}">Generate
-                                                a  new private key</a>
-                                            </li>
-                                            <li>
-                                                <a href="#fakelink">List
-                                                    </a>
-                                                <ul>
-                                                    <li><a href="#fakelink">Element
-                                                        One</a></li>
-                                                    <li><a href="#fakelink">Element
-                                                        Two</a></li>
-                                                    <li><a href="#fakelink">Element
-                                                        Three</a></li>
-                                                </ul>
-                                                <!-- /Sub menu -->
-                                            </li>
-                                            <li><a href="#fakelink">Element
-                                                Three</a></li>
-                                        </ul>
-                                        <!-- /Sub menu -->
                                     </li>
                                     <li>
                                         {% if user.is_authenticated %}

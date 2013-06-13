@@ -40,6 +40,8 @@ urlpatterns = patterns(
     url(r'^accounts/profile/', RedirectView.as_view(url='/')),
     url(r'^create/key/', login_required(views.CreatePrivateKey.as_view()),
         name='create_private_key'),
+    url(r'^list/(?P<choice>[a-z_]+)/?',
+        login_required(views.ObjectList.as_view()), name="list"),
     # url(r'^nimismies/', include('nimismies.foo.urls')),
 
     # Uncomment the admin/doc line below to enable admin documentation:

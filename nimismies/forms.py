@@ -22,14 +22,17 @@
 
 from django import forms
 
+
 class PrivateKey(forms.Form):
     key_type = forms.ChoiceField(choices=(
         ('dsa', 'DSA'), ('rsa', 'RSA'), ('ecdsa', 'EC DSA'),),
-                                 widget=forms.RadioSelect())
+                                 widget=forms.RadioSelect(
+                                     attrs={'class':'radio'}))
 
     key_size = forms.ChoiceField(choices=(
         (1024, '1k'), (2048, '2k'), (4096, '4k'),),
-                                 widget=forms.RadioSelect())
+                                 widget=forms.RadioSelect(
+                                     attrs={'class':'radio'}))
 
     def clean_key_size(self):
         return int(self.data['key_size'])
