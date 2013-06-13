@@ -103,6 +103,7 @@ class EncryptedCharField(models.CharField):
        encrypted fields as that would defeat the entire point of the
        exercise.
     """
+    __metaclass__ = models.SubfieldBase
     _DB_FIELD_PREFIX = "django-encrypted-field:"
     _DB_FIELD_PREFIX_LEN = len(_DB_FIELD_PREFIX)
     _SALT_START = 0
