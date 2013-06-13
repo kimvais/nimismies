@@ -37,6 +37,8 @@ urlpatterns = patterns(
         name='create_private_key'),
     url(r'^create/csr/', login_required(views.CreateCSR.as_view()),
         name='create_csr'),
+    url(r'^sign/(?P<pk>\d+)/', login_required(views.SignCSR.as_view()),
+        name='sign_csr'),
     url(r'^list/(?P<choice>[a-z_]+)/?',
         login_required(views.ObjectList.as_view()), name="list"),
     # url(r'^nimismies/', include('nimismies.foo.urls')),

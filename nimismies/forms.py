@@ -28,27 +28,41 @@ class PrivateKey(forms.Form):
     key_type = forms.ChoiceField(choices=(
         ('dsa', 'DSA'), ('rsa', 'RSA'), ), # ('ecdsa', 'EC DSA'),),
                                  widget=forms.RadioSelect(
-                                     attrs={'class':'radio'}))
+                                     attrs={'class': 'radio'}))
 
     key_size = forms.ChoiceField(choices=(
         (1024, '1k'), (2048, '2k'), (4096, '4k'),),
                                  widget=forms.RadioSelect(
-                                     attrs={'class':'radio'}))
+                                     attrs={'class': 'radio'}))
 
     def clean_key_size(self):
         return int(self.data['key_size'])
 
 
-class CSR(forms.Form):
-    private_key = forms.ChoiceField(widget=forms.Select(choices=(None,None)))
+class PrivateKeySelectionForm(forms.Form):
+    private_key = forms.ChoiceField(widget=forms.Select(choices=(None, None)))
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super(PrivateKeySelectionForm, self).__init__(*args, **kwargs)
+        print(self.user)
+        self.fields['private_key'].choices = list(
+            (key.pk,
+             '{0}-bit {1} key #{2}'.format(
+                 key.bits,
+                 key.key_type.upper(),
+                 key.pk)) for key in
+            models.PrivateKey.objects.filter(
+                owner=self.user))
+
+
+class CSR(PrivateKeySelectionForm):
     subject = forms.CharField(max_length=1024)
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
         super(CSR, self).__init__(*args, **kwargs)
-        self.fields['private_key'].choices = list((key.pk,
-            '{0}-bit {1} key #{2}'.format(
-                key.bits, key.key_type.upper(), key.pk)) for key in
-            models.PrivateKey.objects.filter(owner=user))
-        self.fields['subject'].initial = user.dn
+        self.fields['subject'].initial = self.user.dn
 
+
+class SignCSR(PrivateKeySelectionForm):
+    pass

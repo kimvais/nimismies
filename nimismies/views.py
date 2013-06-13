@@ -35,6 +35,7 @@ from nimismies import forms, models
 
 logger = logging.getLogger(__name__)
 
+
 class Home(TemplateView):
     template_name = "base.html"
 
@@ -52,7 +53,7 @@ class LogOut(View):
 class CreatePrivateKey(FormView):
     form_class = forms.PrivateKey
     template_name = 'create.html'
-    success_url= '/list/private_key/'
+    success_url = '/list/private_key/'
 
     def form_valid(self, form):
         alg = form.cleaned_data.get('key_type', 'dsa')
@@ -86,15 +87,17 @@ class CreatePrivateKey(FormView):
         return super(FormView, self).form_valid(form)
 
 
-class CreateCSR(FormView):
+class FormViewWithUser(FormView):
+    def get_form_kwargs(self):
+        kwargs = super(FormViewWithUser, self).get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+
+class CreateCSR(FormViewWithUser):
     form_class = forms.CSR
     template_name = 'create.html'
     success_url = '/list/csr/'
-
-    def get_form_kwargs(self):
-        kwargs = super(CreateCSR, self).get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
 
     def form_valid(self, form):
         logger.debug(form.cleaned_data)
@@ -132,7 +135,6 @@ class CreateCSR(FormView):
 
 
 class ObjectList(ListView):
-
     def get_template_names(self):
         return ['{0}_list.html'.format(self.choice)]
 
@@ -146,15 +148,39 @@ class ObjectList(ListView):
     def get_model_class(self):
         if self.choice == "private_key":
             return models.PrivateKey
-        if self.choice == "csr":
+        elif self.choice == "csr":
             return models.CertificateSigningRequest
+        elif self.choice == "certificate":
+            return models.Certificate
         else:
             raise RuntimeError("Unknown choice {0}".format(self.choice))
 
     def get_context_data(self, **kwargs):
         ctx = super(ObjectList, self).get_context_data(**kwargs)
         ctx.update(dict(
-            choice = self.choice
+            choice=self.choice
         ))
         return ctx
 
+
+class SignCSR(FormViewWithUser):
+    form_class = forms.SignCSR
+    template_name = "create.html"
+    success_url = '/list/certificate/'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.csr = models.CertificateSigningRequest.objects.get(
+            pk=kwargs.pop('pk'))
+        return super(SignCSR, self).dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        data = form.cleaned_data
+        print(data)
+        pk_o = models.PrivateKey.objects.get(pk=data['private_key'])
+        if pk_o.key_type != 'rsa':
+            raise NotImplementedError("Only RSA keys can be used for signing"
+                                      " at the moment")
+        private_key = M2Crypto.RSA.load_key_string(pk_o.data)
+        print(private_key)
+        print(self.csr)
+        return super(SignCSR, self).form_valid(form)
