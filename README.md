@@ -9,6 +9,21 @@ This project aims to be easy-to-deploy certificate authority (CA) with a web bas
 In addition to the basic CA functionality (issuing Certificates!) I plan on
 adding support for OSCP, SCEP and HSMs.
 
+### Versioning
+
+Version number is stored in settings.VERSION
+
+The project is versioned with one form of semantic versioning. Versions are
+not decimal, so x.y.9 will probably be followed by x.y.10
+
+For 0.0.x version, each time a new functionality is in _working_ condition,
+the 'patch' level will be bumped.
+
+0.1.x will be
+the first version that will be at least _remotely_ usable as a CA.
+After that, each minor version bump will add actual features aiming for
+a 1.0 release at some point in the distant future.
+
 ## License
 
 The MIT License
