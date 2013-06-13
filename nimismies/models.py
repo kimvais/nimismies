@@ -84,5 +84,7 @@ class Certificate(models.Model):
 
 class CertificateSigningRequest(models.Model):
     owner = models.ForeignKey('nimismies.User')
+    created = models.DateTimeField(default=datetime.datetime.utcnow)
     data = models.TextField(null=False)
-
+    subject = models.CharField(max_length=1024)
+    status = models.CharField(max_length=32, default="new")

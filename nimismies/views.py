@@ -20,6 +20,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+import logging
+import os
+import tempfile
+from contextlib import closing
 
 from django.contrib.auth.views import logout
 from django.core.urlresolvers import reverse
@@ -29,6 +33,7 @@ from django.views.generic import TemplateView, View, FormView, ListView
 import M2Crypto
 from nimismies import forms, models
 
+logger = logging.getLogger(__name__)
 
 class Home(TemplateView):
     template_name = "base.html"
@@ -46,8 +51,8 @@ class LogOut(View):
 
 class CreatePrivateKey(FormView):
     form_class = forms.PrivateKey
-    template_name = 'create_private_key.html'
-    success_url = '/'
+    template_name = 'create.html'
+    success_url= '/list/private_key/'
 
     def form_valid(self, form):
         alg = form.cleaned_data.get('key_type', 'dsa')
@@ -81,8 +86,55 @@ class CreatePrivateKey(FormView):
         return super(FormView, self).form_valid(form)
 
 
+class CreateCSR(FormView):
+    form_class = forms.CSR
+    template_name = 'create.html'
+    success_url = '/list/csr/'
+
+    def get_form_kwargs(self):
+        kwargs = super(CreateCSR, self).get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        logger.debug(form.cleaned_data)
+        print(form.cleaned_data)
+        data = form.cleaned_data
+        pk = models.PrivateKey.objects.get(pk=data['private_key'])
+        fd, fpath = tempfile.mkstemp()
+        csr = M2Crypto.X509.Request()
+        name = csr.get_subject()
+        for field in data['subject'].split('/'):
+            attr, value = field.split('=', 1)
+            setattr(name, attr, value)
+        csr.set_subject_name(name)
+        with closing(os.fdopen(fd, 'r+')) as keyfile:
+            keyfile.write(pk.public_key)
+            keyfile.seek(0)
+            if pk.key_type == "rsa":
+                public_key = M2Crypto.RSA.load_pub_key(fpath)
+                pkey = M2Crypto.EVP.PKey()
+                pkey.assign_rsa(public_key)
+                csr.set_pubkey(pkey)
+            elif pk.key_type == "dsa":
+                raise NotImplementedError(
+                    "CSRs for DSA keys is unimplemented due lack of M2Crypto"
+                    " wrappers")
+            else:
+                raise RuntimeError("Invalid key algorithm {0}".format(
+                    pk.key_type))
+        print(name.as_text())
+        csr_o = models.CertificateSigningRequest(data=csr.as_pem(),
+                                                 owner=self.request.user)
+        csr_o.subject = name.as_text()
+        csr_o.save()
+        return super(FormView, self).form_valid(form)
+
+
 class ObjectList(ListView):
-    template_name = 'list.html'
+
+    def get_template_names(self):
+        return ['{0}_list.html'.format(self.choice)]
 
     def dispatch(self, request, *args, **kwargs):
         self.choice = kwargs.pop('choice', None)
@@ -94,6 +146,8 @@ class ObjectList(ListView):
     def get_model_class(self):
         if self.choice == "private_key":
             return models.PrivateKey
+        if self.choice == "csr":
+            return models.CertificateSigningRequest
         else:
             raise RuntimeError("Unknown choice {0}".format(self.choice))
 

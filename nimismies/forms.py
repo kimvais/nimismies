@@ -21,6 +21,7 @@
 # THE SOFTWARE.
 
 from django import forms
+from nimismies import models
 
 
 class PrivateKey(forms.Form):
@@ -36,3 +37,18 @@ class PrivateKey(forms.Form):
 
     def clean_key_size(self):
         return int(self.data['key_size'])
+
+
+class CSR(forms.Form):
+    private_key = forms.ChoiceField(widget=forms.Select(choices=(None,None)))
+    subject = forms.CharField(max_length=1024)
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super(CSR, self).__init__(*args, **kwargs)
+        self.fields['private_key'].choices = list((key.pk,
+            '{0}-bit {1} key #{2}'.format(
+                key.bits, key.key_type.upper(), key.pk)) for key in
+            models.PrivateKey.objects.filter(owner=user))
+        self.fields['subject'].initial = user.dn
+
