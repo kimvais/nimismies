@@ -21,6 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import datetime
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from . import fields
@@ -72,6 +73,7 @@ class PrivateKey(models.Model):
     public_key = models.TextField()
     bits = models.IntegerField()
     key_type = models.CharField(max_length=16)
+    created = models.DateTimeField(default=datetime.datetime.utcnow)
 
 
 class Certificate(models.Model):

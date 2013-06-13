@@ -26,7 +26,7 @@ from django.core.urlresolvers import reverse
 from django.shortcuts import redirect
 from django.views.generic import TemplateView, View, FormView, ListView
 
-from M2Crypto import DSA, BIO
+import M2Crypto
 from nimismies import forms, models
 
 
@@ -35,8 +35,6 @@ class Home(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super(TemplateView, self).get_context_data(**kwargs)
-        ctx.update(dict(app_name="Nimismies",
-                        author="Kimvais"))
         return ctx
 
 
@@ -55,22 +53,31 @@ class CreatePrivateKey(FormView):
         alg = form.cleaned_data.get('key_type', 'dsa')
         size = form.cleaned_data.get('key_size', 2048)
         print(type(size))
+        private = M2Crypto.BIO.MemoryBuffer()
+        public = M2Crypto.BIO.MemoryBuffer()
         if alg == "dsa":
-            key = DSA.gen_params(size)
-            private = BIO.MemoryBuffer()
-            public = BIO.MemoryBuffer()
+            key = M2Crypto.DSA.gen_params(size)
             key.gen_key()
-            key.save_key_bio(private, cipher=None)
-            key.save_pub_key_bio(public)
-            # print(public.getvalue())
-            # print(private.getvalue())
-            private_key = models.PrivateKey()
-            private_key.data = private.getvalue()
-            private_key.public_key = public.getvalue()
-            private_key.owner = self.request.user
-            private_key.bits = size
-            private_key.key_type = alg
-            private_key.save()
+        elif alg == "ecdsa":
+            # TODO: Implement this
+            CURVES = dict()
+            key = M2Crypto.EC.gen_params(CURVES[size])
+            key.gen_key()
+        elif alg == "rsa":
+            key = M2Crypto.RSA.gen_key(size, 65537)
+        else:
+            raise RuntimeError('Invalid algorithm {0}'.format(alg))
+        key.save_key_bio(private, cipher=None)
+        key.save_pub_key_bio(public)
+        # print(public.getvalue())
+        # print(private.getvalue())
+        private_key = models.PrivateKey()
+        private_key.data = private.getvalue()
+        private_key.public_key = public.getvalue()
+        private_key.owner = self.request.user
+        private_key.bits = size
+        private_key.key_type = alg
+        private_key.save()
         return super(FormView, self).form_valid(form)
 
 
@@ -93,8 +100,6 @@ class ObjectList(ListView):
     def get_context_data(self, **kwargs):
         ctx = super(ObjectList, self).get_context_data(**kwargs)
         ctx.update(dict(
-            app_name = "nimismies",
-            author = "Kimvais",
             choice = self.choice
         ))
         return ctx

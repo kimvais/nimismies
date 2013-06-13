@@ -1,3 +1,4 @@
+#
 # -*- coding: utf-8 -*-
 #
 # Copyright © 2013 Kimmo Parviainen-Jalanko <k@77.fi>
@@ -20,19 +21,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from django import forms
-
-
-class PrivateKey(forms.Form):
-    key_type = forms.ChoiceField(choices=(
-        ('dsa', 'DSA'), ('rsa', 'RSA'), ), # ('ecdsa', 'EC DSA'),),
-                                 widget=forms.RadioSelect(
-                                     attrs={'class':'radio'}))
-
-    key_size = forms.ChoiceField(choices=(
-        (1024, '1k'), (2048, '2k'), (4096, '4k'),),
-                                 widget=forms.RadioSelect(
-                                     attrs={'class':'radio'}))
-
-    def clean_key_size(self):
-        return int(self.data['key_size'])
+def nimismies(request):
+    return dict(app_name="nimismies",
+                author="Kimvais")

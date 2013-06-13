@@ -22,13 +22,8 @@
 # THE SOFTWARE.
 
 from django.conf.urls import patterns, include, url
-
-# Uncomment the next two lines to enable the admin:
-from django.contrib import admin
 from django.contrib.auth.views import login
 from django.contrib.auth.decorators import login_required
-
-admin.autodiscover()
 from django.views.generic import RedirectView
 from nimismies import views
 
@@ -43,10 +38,4 @@ urlpatterns = patterns(
     url(r'^list/(?P<choice>[a-z_]+)/?',
         login_required(views.ObjectList.as_view()), name="list"),
     # url(r'^nimismies/', include('nimismies.foo.urls')),
-
-    # Uncomment the admin/doc line below to enable admin documentation:
-    # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
-
-    # Uncomment the next line to enable the admin:
-    url(r'^admin/', include(admin.site.urls)),
 )
