@@ -161,7 +161,7 @@ class EncryptedCharField(models.CharField):
         salt = encrypted[self._SALT_START:self._IV_START]
         iv = encrypted[self._IV_START:self._CIPHERTEXT_START]
         ciphertext = encrypted[self._CIPHERTEXT_START:]
-        return self._cipher.decrypt(salt, iv, ciphertext).decode('ascii')
+        return str(self._cipher.decrypt(salt, iv, ciphertext).decode('ascii'))
 
     def formfield(self, **kwds):
         defaults = {'widget': forms.PasswordInput(render_value=False),
