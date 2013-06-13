@@ -2,10 +2,12 @@
 {% block content %}
     <div class="row">
         <div class="span12">
-            <form class="key" method="post" action=".">
-             {% csrf_token %}
+            <form class="form-horizontal well" method="post" action=".">
+                <fieldset>
+                {% csrf_token %}
             {{ form.as_p }}
                 <button type="submit" class="btn">Create</button>
+                </fieldset>
             </form>
         </div>
     </div>
