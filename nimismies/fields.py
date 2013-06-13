@@ -1,4 +1,3 @@
-#
 # -*- coding: utf-8 -*-
 #
 # Copyright © 2013 Kimmo Parviainen-Jalanko <k@77.fi>
@@ -32,7 +31,8 @@ from M2Crypto import Rand, EVP
 
 
 def _base64_len(length):
-    """Converts a length in 8 bit bytes to a length in 6 bits per byte base64 encoding"""
+    """Converts a length in 8 bit bytes to a length in 6 bits per byte\
+    base64 encoding"""
     # Every 24 bits (3 bytes) becomes 32 bits (4 bytes, 6 bits encoded per byte)
     # End is padded with '=' to make the result a multiple of 4
     units, trailing = divmod(length, 3)
@@ -157,7 +157,7 @@ class EncryptedCharField(models.CharField):
             encoded = field_data
         else:
             return field_data
-        encrypted = b64decode(encoded)
+        encrypted = b64decode(str(encoded))
         salt = encrypted[self._SALT_START:self._IV_START]
         iv = encrypted[self._IV_START:self._CIPHERTEXT_START]
         ciphertext = encrypted[self._CIPHERTEXT_START:]
