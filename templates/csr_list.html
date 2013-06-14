@@ -27,7 +27,15 @@
                         <th>{{ obj.pk }}</th>
                         <td>{{ obj.created.isoformat }}</td>
                         <td>{{ obj.subject }}</td>
-                        <td>{{ obj.status }}</td>
+                        <td>{{ obj.status }}
+                            {% if obj.status == "new" %}
+                                <a href="{% url 'sign_csr' pk=obj.pk %}"
+                                   class="btn btn-primary">
+                                Sign
+                                </a>
+                            {% endif %}
+                        </td>
+
                     </tr>
                 {% endfor %}
             </tbody>

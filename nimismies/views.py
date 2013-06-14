@@ -28,9 +28,11 @@ from contextlib import closing
 from django.contrib.auth.views import logout
 from django.core.urlresolvers import reverse
 from django.shortcuts import redirect
+from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView, View, FormView, ListView
 
 import M2Crypto
+from jsforms.decorators import jsform
 from nimismies import forms, models
 
 logger = logging.getLogger(__name__)
@@ -168,6 +170,7 @@ class SignCSR(FormViewWithUser):
     template_name = "create.html"
     success_url = '/list/certificate/'
 
+    @method_decorator(jsform())
     def dispatch(self, request, *args, **kwargs):
         self.csr = models.CertificateSigningRequest.objects.get(
             pk=kwargs.pop('pk'))
