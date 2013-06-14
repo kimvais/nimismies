@@ -22,6 +22,7 @@
 # THE SOFTWARE.
 
 import datetime
+import M2Crypto
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from . import fields
@@ -75,12 +76,26 @@ class PrivateKey(models.Model):
     key_type = models.CharField(max_length=16)
     created = models.DateTimeField(default=datetime.datetime.utcnow)
 
+    def get_m2_key(self, md='sha1'):
+        if self.key_type != 'rsa':
+            raise RuntimeWarning('Not a RSA key')
+        _rsa_key = M2Crypto.RSA.load_key_string(self.data)
+        key = M2Crypto.EVP.PKey(md=md)
+        key.assign_rsa(_rsa_key)
+        return key
+
+    def __unicode__(self):
+        return '{bits}-bit {key_type} key #{id} for <{0}>'.format(
+            self.owner, **self.__dict__)
+
 
 class Certificate(models.Model):
     owner = models.ForeignKey('nimismies.User')
     issuer = models.ForeignKey('nimismies.Certificate',
                                null=True)  # null means self-signed
     data = models.TextField(null=False)
+    created = models.DateTimeField(default=datetime.datetime.utcnow)
+    private_key = models.ForeignKey('nimismies.PrivateKey', null=True)
 
 
 class CertificateSigningRequest(models.Model):
@@ -89,3 +104,4 @@ class CertificateSigningRequest(models.Model):
     data = models.TextField(null=False)
     subject = models.CharField(max_length=1024)
     status = models.CharField(max_length=32, default="new")
+    private_key = models.ForeignKey('nimismies.PrivateKey', null=True)

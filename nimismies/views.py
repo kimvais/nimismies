@@ -25,17 +25,18 @@ import os
 import subprocess
 import tempfile
 from contextlib import closing
+import time
 
 from django.contrib.auth.views import logout
 from django.core.urlresolvers import reverse
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView, View, FormView, ListView
-
 import M2Crypto
-import time
+
 from jsforms.decorators import jsform
 from nimismies import forms, models
+
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,7 @@ class FormViewWithUser(FormView):
         kwargs['user'] = self.request.user
         return kwargs
 
+
 def set_name_from_string(dn_string, name=None):
     if name is None:
         name = M2Crypto.X509.X509_Name
@@ -105,8 +107,8 @@ def set_name_from_string(dn_string, name=None):
         setattr(name, attr, value)
     return name
 
-class CreateCSR(FormViewWithUser):
 
+class CreateCSR(FormViewWithUser):
     form_class = forms.CSR
     template_name = 'create.html'
 
@@ -117,12 +119,11 @@ class CreateCSR(FormViewWithUser):
         logger.debug(form.cleaned_data)
         data = form.cleaned_data
         pk = models.PrivateKey.objects.get(pk=data['private_key'])
-        fd, fpath = tempfile.mkstemp()
-        logger.debug(fpath)
         csr = M2Crypto.X509.Request()
         name = csr.get_subject()
         set_name_from_string(data['subject'].split('/'), name)
         csr.set_subject_name(name)
+        fd, fpath = tempfile.mkstemp()
         with closing(os.fdopen(fd, 'r+')) as keyfile:
             keyfile.write(pk.public_key)
             keyfile.seek(0)
@@ -143,6 +144,7 @@ class CreateCSR(FormViewWithUser):
         csr_o = models.CertificateSigningRequest(data=csr.as_pem(),
                                                  owner=self.request.user)
         csr_o.subject = name.as_text()
+        csr_o.private_key = pk
         csr_o.save()
         return super(FormView, self).form_valid(form)
 
@@ -195,14 +197,14 @@ class SignCSR(FormViewWithUser):
         if pk_o.key_type != 'rsa':
             raise NotImplementedError("Only RSA keys can be used for signing"
                                       " at the moment")
-        _private_key = M2Crypto.RSA.load_key_string(pk_o.data)
-        private_key = M2Crypto.EVP.PKey(md='sha1')
-        private_key.assign_rsa(_private_key)
-        with open('/tmp/mycsr.csr', 'w') as f:
+        private_key = pk_o.get_m2_key()
+        fd, fpath = tempfile.mkstemp()
+        with closing(os.fdopen(fd, 'r+')) as f:
             f.write(self.csr.data)
         logger.debug(subprocess.check_output(
-            'openssl req -in /tmp/mycsr.csr -noout -text'.split()))
-        csr = M2Crypto.X509.load_request('/tmp/mycsr.csr')
+            'openssl req -in {0} -noout -text'.format(fpath).split()))
+        csr = M2Crypto.X509.load_request(fpath)
+        os.remove(fpath)
         logger.debug(private_key)
         logger.debug(csr)
         # Calculate validity period
@@ -229,6 +231,7 @@ class SignCSR(FormViewWithUser):
         crt.owner = owner
         crt.issuer = None
         crt.data = certificate.as_pem()
+        crt.private_key = pk_o
         crt.save()
 
         return super(SignCSR, self).form_valid(form)
