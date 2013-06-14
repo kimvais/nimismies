@@ -90,7 +90,7 @@ class PrivateKey(models.Model):
 
 
 class Certificate(models.Model):
-    owner = models.ForeignKey('nimismies.User')
+    owner = models.ForeignKey('nimismies.User', null=True)
     issuer = models.ForeignKey('nimismies.Certificate',
                                null=True)  # null means self-signed
     data = models.TextField(null=False)

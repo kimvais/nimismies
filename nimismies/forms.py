@@ -19,6 +19,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+from contextlib import closing
+import os
+import tempfile
+import traceback
+import M2Crypto
 
 from django import forms
 from nimismies import models
@@ -30,7 +35,7 @@ class PrivateKey(forms.Form):
                                  widget=forms.RadioSelect(
                                      attrs={'class': 'radio'}),
                                  initial="rsa"
-)
+    )
 
     key_size = forms.ChoiceField(choices=(
         (1024, '1k'), (2048, '2k'), (4096, '4k'),),
@@ -68,4 +73,48 @@ class CSR(PrivateKeySelectionForm):
 
 
 class SignCSR(PrivateKeySelectionForm):
-    pass
+    def __init__(self, *args, **kwargs):
+        choices = list()
+        subject = kwargs.pop('subject')
+        public_key = kwargs.pop('public_key')
+        try:
+            private_key = models.PrivateKey.objects.get(public_key=public_key)
+        except models.PrivateKey.DoesNotExist:
+            private_key = None
+        if private_key is not None:
+            choices.append((private_key.pk, "Self-signed"))
+        choices.extend((cert.private_key_id, cert.pk)
+                       for cert in models.Certificate.objects.exclude(
+            private_key=None))
+        super(SignCSR, self).__init__(*args, **kwargs)
+        self.fields['private_key'].choices = choices
+
+
+class CSRUpload(forms.Form):
+    paste = forms.CharField(widget=forms.Textarea(
+        attrs={'width': '95%'}), required=False, )
+    upload = forms.FileField(required=False)
+
+    def clean(self):
+        if not self.cleaned_data['paste'] and not self.files:
+            raise forms.ValidationError("Must either paste or upload a "
+                                        "request")
+        if self.cleaned_data['paste']:
+            data = str(self.cleaned_data['paste'])
+        else:
+            data = str(self.files['upload'].read())
+        fd, fpath = tempfile.mkstemp()
+        with closing(os.fdopen(fd, 'r+')) as csr_file:
+            csr_file.write(data)
+            csr_file.seek(0)
+            try:
+                M2Crypto.X509.load_request(fpath)
+            except Exception as e:
+                print(e)
+                traceback.print_exc()
+                raise forms.ValidationError("Malformed certificate singing "
+                                            "request")
+            finally:
+                os.remove(fpath)
+        return dict(csr=data)
+

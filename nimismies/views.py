@@ -20,6 +20,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+from __future__ import print_function
 import logging
 import os
 import subprocess
@@ -39,6 +40,7 @@ from nimismies import forms, models
 
 
 logger = logging.getLogger(__name__)
+logger.debug = print
 
 
 class Home(TemplateView):
@@ -54,10 +56,15 @@ class LogOut(View):
         logout(request)
         return redirect(reverse('login'))
 
+class CreateViewMixin(object):
+    def get_context_data(self, **kwargs):
+        ctx =  super(CreateViewMixin, self).get_context_data(**kwargs)
+        ctx['button_text'] = 'Create'
+        return ctx
 
-class CreatePrivateKey(FormView):
+class CreatePrivateKey(CreateViewMixin, FormView):
     form_class = forms.PrivateKey
-    template_name = 'create.html'
+    template_name = 'form.html'
     success_url = '/list/private_key/'
 
     def form_valid(self, form):
@@ -108,9 +115,9 @@ def set_name_from_string(dn_string, name=None):
     return name
 
 
-class CreateCSR(FormViewWithUser):
+class CreateCSR(CreateViewMixin, FormViewWithUser):
     form_class = forms.CSR
-    template_name = 'create.html'
+    template_name = 'form.html'
 
     success_url = '/list/csr/'
 
@@ -180,13 +187,15 @@ class ObjectList(ListView):
 
 class SignCSR(FormViewWithUser):
     form_class = forms.SignCSR
-    template_name = "create.html"
+    template_name = "form.html"
     success_url = '/list/certificate/'
 
     @method_decorator(jsform())
     def dispatch(self, request, *args, **kwargs):
         self.csr = models.CertificateSigningRequest.objects.get(
             pk=kwargs.pop('pk'))
+        bio = M2Crypto.BIO.MemoryBuffer(data=str(self.csr.data))
+        self.m2csr = M2Crypto.X509.load_request_bio(bio)
         return super(SignCSR, self).dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
@@ -236,7 +245,10 @@ class SignCSR(FormViewWithUser):
         # M2Crypto Certificate is all set up, let's make a model instance out
         # of it
         crt = models.Certificate()
-        owner = models.User.objects.get(dn=certificate.get_subject().as_text())
+        try:
+            owner = models.User.objects.get(dn=certificate.get_subject().as_text())
+        except models.User.DoesNotExist:
+            owner = None
         crt.owner = owner
         crt.issuer = None
         crt.data = certificate.as_pem()
@@ -247,3 +259,37 @@ class SignCSR(FormViewWithUser):
         self.csr.save()
 
         return super(SignCSR, self).form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        ctx =  super(SignCSR, self).get_context_data(**kwargs)
+        ctx["button_text"] = "Certify"
+        return ctx
+
+    def get_form_kwargs(self):
+        kw = super(SignCSR, self).get_form_kwargs()
+        kw['subject'] = self.m2csr.get_subject().as_text()
+        kw['public_key'] = self.m2csr.get_pubkey()
+        return kw
+
+
+class UploadCSR(FormView):
+    form_class = forms.CSRUpload
+    success_url = '/list/csr/'
+    template_name = 'fileform.html'
+
+    def get_context_data(self, **kwargs):
+        ctx =  super(UploadCSR, self).get_context_data(**kwargs)
+        ctx['button_text'] = 'Upload'
+        return ctx
+
+    def form_valid(self, form):
+        raw_csr = form.cleaned_data['csr']
+        print(raw_csr)
+        csr = models.CertificateSigningRequest(data=raw_csr,
+                                                 owner=self.request.user)
+        bio = M2Crypto.BIO.MemoryBuffer(data=raw_csr)
+        req = M2Crypto.X509.load_request_bio(bio)
+        csr.subject = req.get_subject().as_text()
+        csr.private_key = None
+        csr.save()
+        return super(UploadCSR, self).form_valid(form)
