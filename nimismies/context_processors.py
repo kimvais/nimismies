@@ -22,5 +22,7 @@
 # THE SOFTWARE.
 
 def nimismies(request):
-    return dict(app_name="nimismies",
-                author="Kimvais")
+    context = dict(app_name="nimismies", user=request.user, author="Kimvais")
+    if not request.user.is_authenticated():
+        context['choice'] = 'login'
+    return context
