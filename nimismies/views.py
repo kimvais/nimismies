@@ -197,7 +197,6 @@ class SignCSR(FormViewWithUser):
         if pk_o.key_type != 'rsa':
             raise NotImplementedError("Only RSA keys can be used for signing"
                                       " at the moment")
-        private_key = pk_o.get_m2_key()
         fd, fpath = tempfile.mkstemp()
         with closing(os.fdopen(fd, 'r+')) as f:
             f.write(self.csr.data)
@@ -205,6 +204,10 @@ class SignCSR(FormViewWithUser):
             'openssl req -in {0} -noout -text'.format(fpath).split()))
         csr = M2Crypto.X509.load_request(fpath)
         os.remove(fpath)
+        # Set up the keys
+        private_key = pk_o.get_m2_key()
+        public_key = csr.get_pubkey()
+        logger.debug(public_key)
         logger.debug(private_key)
         logger.debug(csr)
         # Calculate validity period
@@ -215,17 +218,23 @@ class SignCSR(FormViewWithUser):
         valid_until = M2Crypto.ASN1.ASN1_UTCTIME()
         valid_until.set_time(t_end)
         issuer = csr.get_subject()
-        public_key = csr.get_pubkey()
-        logger.debug(public_key)
+        # Set serial number both for certificate and the CA
+        ca_serial, _ = models.CASerial.objects.get_or_create(
+            subject=issuer.as_text())
+        ca_serial.serial_number += 1
+        ca_serial.save()
+        serial = ca_serial.serial_number
         # Generate the actual certificate
         certificate = M2Crypto.X509.X509()
-        certificate.set_version(0)
+        certificate.set_version(serial)
         certificate.set_not_before(valid_from)
         certificate.set_not_after(valid_until)
         certificate.set_pubkey(public_key)
         certificate.set_issuer(issuer)
         certificate.set_subject(issuer)
         certificate.sign(private_key, md='sha1')
+        # M2Crypto Certificate is all set up, let's make a model instance out
+        # of it
         crt = models.Certificate()
         owner = models.User.objects.get(dn=certificate.get_subject().as_text())
         crt.owner = owner
@@ -233,5 +242,8 @@ class SignCSR(FormViewWithUser):
         crt.data = certificate.as_pem()
         crt.private_key = pk_o
         crt.save()
+        # and finally mark the CSR as processed
+        self.csr.status = "signed"
+        self.csr.save()
 
         return super(SignCSR, self).form_valid(form)

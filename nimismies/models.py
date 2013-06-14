@@ -97,6 +97,12 @@ class Certificate(models.Model):
     created = models.DateTimeField(default=datetime.datetime.utcnow)
     private_key = models.ForeignKey('nimismies.PrivateKey', null=True)
 
+    def __unicode__(self):
+        if self.issuer is None:
+            issuer = self.owner.dn
+        else:
+            issuer = self.issuer.dn
+        return '{0} signed by {1}'.format(self.owner.dn, issuer)
 
 class CertificateSigningRequest(models.Model):
     owner = models.ForeignKey('nimismies.User')
@@ -105,3 +111,8 @@ class CertificateSigningRequest(models.Model):
     subject = models.CharField(max_length=1024)
     status = models.CharField(max_length=32, default="new")
     private_key = models.ForeignKey('nimismies.PrivateKey', null=True)
+
+
+class CASerial(models.Model):
+    subject = models.CharField(max_length=1024, unique=True)
+    serial_number = models.IntegerField(default=0)
