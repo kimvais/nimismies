@@ -1,0 +1,3 @@
+[submodule "jsforms"]
+	path = jsforms
+	url = https://github.com/kimvais/jsforms
