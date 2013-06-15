@@ -2,6 +2,17 @@
 
 This project aims to be easy-to-deploy certificate authority (CA) with a web based UI. It will run on Django and OpenSSL (via M2Crypto)
 
+## Instructions
+
+### Installation
+
+1. `git clone git://github.com/kimvais/nimismies.git`
+1. `cd nimismies`
+1. `createdb nimismies`
+1. `python manage.py syncdb`
+1. `python manage.py migrate nimismies`
+1. `./adduser.py <your email address>`
+
 ## Features
 
 * None for the time being, really
