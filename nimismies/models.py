@@ -91,18 +91,51 @@ class PrivateKey(models.Model):
 
 class Certificate(models.Model):
     owner = models.ForeignKey('nimismies.User', null=True)
-    issuer = models.ForeignKey('nimismies.Certificate',
+    _issuer = models.ForeignKey('nimismies.Certificate',
                                null=True)  # null means self-signed
     data = models.TextField(null=False)
     created = models.DateTimeField(default=datetime.datetime.utcnow)
     private_key = models.ForeignKey('nimismies.PrivateKey', null=True)
 
     def __unicode__(self):
-        if self.issuer is None:
+        if self._issuer is None:
             issuer = self.owner.dn
         else:
-            issuer = self.issuer.dn
+            issuer = self._issuer.dn
         return '{0} signed by {1}'.format(self.owner.dn, issuer)
+
+    def get_m2_certificate(self):
+        return M2Crypto.X509.load_cert_string(str(self.data))
+
+    def __init__(self, *args, **kwargs):
+        super(Certificate, self).__init__(*args, **kwargs)
+        self.m2_certificate = self.get_m2_certificate()
+
+    @property
+    def issuer(self):
+        return self.m2_certificate.get_issuer().as_text()
+
+    @property
+    def subject(self):
+        return self.m2_certificate.get_subject().as_text()
+
+    @property
+    def serial(self):
+        return self.m2_certificate.get_serial_number()
+
+    @property
+    def sha1_fingerprint(self):
+        return self.m2_certificate.get_fingerprint(md='sha1')
+
+    @property
+    def sha2_fingerprint(self):
+        return self.m2_certificate.get_fingerprint(md='sha256')
+
+    @property
+    def validity(self):
+        return (self.m2_certificate.get_not_before().get_datetime(),
+                self.m2_certificate.get_not_after().get_datetime())
+
 
 class CertificateSigningRequest(models.Model):
     owner = models.ForeignKey('nimismies.User')

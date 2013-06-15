@@ -33,8 +33,8 @@ class Migration(SchemaMigration):
         # Adding model 'Certificate'
         db.create_table(u'nimismies_certificate', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('owner', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['nimismies.User'])),
-            ('issuer', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['nimismies.Certificate'], null=True)),
+            ('owner', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['nimismies.User'], null=True)),
+            ('_issuer', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['nimismies.Certificate'], null=True)),
             ('data', self.gf('django.db.models.fields.TextField')()),
             ('created', self.gf('django.db.models.fields.DateTimeField')(default=datetime.datetime.utcnow)),
             ('private_key', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['nimismies.PrivateKey'], null=True)),
@@ -53,6 +53,14 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal(u'nimismies', ['CertificateSigningRequest'])
 
+        # Adding model 'CASerial'
+        db.create_table(u'nimismies_caserial', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('subject', self.gf('django.db.models.fields.CharField')(unique=True, max_length=1024)),
+            ('serial_number', self.gf('django.db.models.fields.IntegerField')(default=0)),
+        ))
+        db.send_create_signal(u'nimismies', ['CASerial'])
+
 
     def backwards(self, orm):
         # Deleting model 'User'
@@ -67,15 +75,24 @@ class Migration(SchemaMigration):
         # Deleting model 'CertificateSigningRequest'
         db.delete_table(u'nimismies_certificatesigningrequest')
 
+        # Deleting model 'CASerial'
+        db.delete_table(u'nimismies_caserial')
+
 
     models = {
+        u'nimismies.caserial': {
+            'Meta': {'object_name': 'CASerial'},
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'serial_number': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
+            'subject': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '1024'})
+        },
         u'nimismies.certificate': {
             'Meta': {'object_name': 'Certificate'},
+            '_issuer': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['nimismies.Certificate']", 'null': 'True'}),
             'created': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.utcnow'}),
             'data': ('django.db.models.fields.TextField', [], {}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'issuer': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['nimismies.Certificate']", 'null': 'True'}),
-            'owner': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['nimismies.User']"}),
+            'owner': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['nimismies.User']", 'null': 'True'}),
             'private_key': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['nimismies.PrivateKey']", 'null': 'True'})
         },
         u'nimismies.certificatesigningrequest': {
