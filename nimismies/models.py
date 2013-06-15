@@ -72,11 +72,12 @@ class PrivateKey(models.Model):
                                      passphrase_setting='SECRET_KEY',
                                      max_length=8192)
     public_key = models.TextField()
-    bits = models.IntegerField()
     key_type = models.CharField(max_length=16)
     created = models.DateTimeField(default=datetime.datetime.utcnow)
 
     def get_m2_key(self, md='sha1'):
+        if not self.data:
+            return None
         if self.key_type != 'rsa':
             raise RuntimeWarning('Not a RSA key')
         _rsa_key = M2Crypto.RSA.load_key_string(self.data)
@@ -88,6 +89,13 @@ class PrivateKey(models.Model):
         return '{bits}-bit {key_type} key #{id} for <{0}>'.format(
             self.owner, **self.__dict__)
 
+    def __init__(self, *args, **kwargs):
+        super(PrivateKey, self).__init__(*args, **kwargs)
+        self.key = self.get_m2_key()
+
+    @property
+    def bits(self):
+        return self.key.size() * 8
 
 class Certificate(models.Model):
     owner = models.ForeignKey('nimismies.User', null=True)
