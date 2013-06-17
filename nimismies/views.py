@@ -93,7 +93,6 @@ class CreatePrivateKey(CreateViewMixin, FormView):
         private_key.data = private.getvalue()
         private_key.public_key = public.getvalue()
         private_key.owner = self.request.user
-        private_key.bits = size
         private_key.key_type = alg
         private_key.save()
         return super(FormView, self).form_valid(form)
