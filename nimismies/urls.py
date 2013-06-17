@@ -48,7 +48,10 @@ urlpatterns = patterns(
     url(r'^list/(?P<choice>certificate)/?',
         login_required(views.CertificateList.as_view()), name="list"),
     url(r'^download/certificate/(?P<pk>\d+)/?',
-        login_required(views.DownloadCertificate.as_view()),
+        views.DownloadCertificate.as_view(),
         name="download_certificate"),
+    url(r'^certificate/(?P<pk>\d+)/?',
+        login_required(views.Certificate.as_view()),
+        name="certificate"),
     # url(r'^nimismies/', include('nimismies.foo.urls')),
 )

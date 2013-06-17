@@ -33,7 +33,7 @@ from django.core.urlresolvers import reverse
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
-from django.views.generic import TemplateView, View, FormView, ListView
+from django.views.generic import TemplateView, View, FormView, ListView, DetailView
 import M2Crypto
 
 from jsforms.decorators import jsform
@@ -332,3 +332,8 @@ class DownloadCertificate(View):
         response.content_type = 'text/plain'
         response['Content-Disposition'] = 'attachment; certificate.pem'
         return response
+
+
+class Certificate(DetailView):
+    template_name = "certificate_detail.html"
+    model = models.Certificate

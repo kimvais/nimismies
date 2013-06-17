@@ -38,6 +38,14 @@
                                 href="{% url 'download_certificate' pk=obj.pk %}"
                                 class="btn btn-link">
                             Download</a>
+                            <a
+                                    href="{% url 'certificate' pk=obj.pk %}"
+                                    class="btn"
+                                    data-toggle="modal"
+                                    data-target="cert_popup"
+                                    data-original-title="{{ obj.subject }}"
+                                    >Show
+                            </a>
                         <td>
                     </tr>
                 {% endfor %}
@@ -45,4 +53,6 @@
             </table>
         </div>
     </div>
+    <div id="cert_popup" class="modal hide fade" tabindex="-1" role="dialog"
+         aria-labelledby="myModalLabel" aria-hidden="true"></div>
 {% endblock %}

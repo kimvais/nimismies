@@ -32,14 +32,14 @@ from nimismies import models
 class PrivateKey(forms.Form):
     key_type = forms.ChoiceField(choices=(
         ('rsa', 'RSA'),), # ('dsa', 'DSA'), ('ecdsa', 'EC DSA'),),
-                                 widget=forms.RadioSelect(
+                                 widget=forms.Select(
                                      attrs={'class': 'radio'}),
                                  initial="rsa"
     )
 
     key_size = forms.ChoiceField(choices=(
-        (1024, '1k'), (2048, '2k'), (4096, '4k'),),
-                                 widget=forms.RadioSelect(
+        (1024, '1024 bits'), (2048, '2048 bits'), (4096, '4096 bits'),),
+                                 widget=forms.Select(
                                      attrs={'class': 'radio'}),
                                  initial=2048)
 
