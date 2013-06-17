@@ -28,12 +28,8 @@
                     <tr>
                         <th>{{ obj.pk }}</th>
                         <td>{{ obj.private_key }}</td>
-                        <td>{{ obj.owner.dn }}</td>
-                        <td>{% if obj.issuer %}
-                            {{ obj.issuer }}
-                        {% else %}
-                            self-signed
-                        {% endif %}</td>
+                        <td>{{ obj.subject }}</td>
+                        <td>{{ obj.issuer }}</td>
                         <td>{{ obj.created.isoformat }}</td>
                     </tr>
                 {% endfor %}

@@ -43,6 +43,10 @@ logger = logging.getLogger(__name__)
 logger.debug = print
 
 
+def empty_callback(_=None):
+    pass
+
+
 class Home(TemplateView):
     template_name = "base.html"
 
@@ -56,11 +60,13 @@ class LogOut(View):
         logout(request)
         return redirect(reverse('login'))
 
+
 class CreateViewMixin(object):
     def get_context_data(self, **kwargs):
-        ctx =  super(CreateViewMixin, self).get_context_data(**kwargs)
+        ctx = super(CreateViewMixin, self).get_context_data(**kwargs)
         ctx['button_text'] = 'Create'
         return ctx
+
 
 class CreatePrivateKey(CreateViewMixin, FormView):
     form_class = forms.PrivateKey
@@ -138,7 +144,10 @@ class CreateCSR(CreateViewMixin, FormViewWithUser):
                 os.remove(fpath)
                 pkey = M2Crypto.EVP.PKey(md='sha1')
                 pkey.assign_rsa(public_key)
+                print(pkey.as_pem(cipher=None, callback=empty_callback))
                 csr.set_pubkey(pkey)
+                print(csr.get_pubkey().as_pem(cipher=None,
+                                              callback=empty_callback))
             elif pk.key_type == "dsa":
                 raise NotImplementedError(
                     "CSRs for DSA keys is unimplemented due lack of M2Crypto"
@@ -156,25 +165,12 @@ class CreateCSR(CreateViewMixin, FormViewWithUser):
 
 
 class ObjectList(ListView):
+    choice = None
     def get_template_names(self):
         return ['{0}_list.html'.format(self.choice)]
 
-    def dispatch(self, request, *args, **kwargs):
-        self.choice = kwargs.pop('choice', None)
-        return super(ObjectList, self).dispatch(request, *args, **kwargs)
-
     def get_queryset(self):
-        return self.get_model_class().objects.filter(owner=self.request.user)
-
-    def get_model_class(self):
-        if self.choice == "private_key":
-            return models.PrivateKey
-        elif self.choice == "csr":
-            return models.CertificateSigningRequest
-        elif self.choice == "certificate":
-            return models.Certificate
-        else:
-            raise RuntimeError("Unknown choice {0}".format(self.choice))
+        raise RuntimeError('cannot get list of base class')
 
     def get_context_data(self, **kwargs):
         ctx = super(ObjectList, self).get_context_data(**kwargs)
@@ -184,40 +180,67 @@ class ObjectList(ListView):
         return ctx
 
 
+class PrivateKeyList(ObjectList):
+    choice = "private_key"
+    def get_queryset(self):
+        return models.PrivateKey.objects.filter(owner=self.request.user)
+
+
+class CertificateList(ObjectList):
+    choice = "certificate"
+    def get_queryset(self):
+        return models.Certificate.objects.all()
+
+
+class CSRList(ObjectList):
+    choice = "csr"
+    def get_queryset(self):
+        return models.CertificateSigningRequest.objects.exclude(
+            status="signed")
+
+
 class SignCSR(FormViewWithUser):
     form_class = forms.SignCSR
-    template_name = "form.html"
+    template_name = "sign.html"
     success_url = '/list/certificate/'
 
     @method_decorator(jsform())
     def dispatch(self, request, *args, **kwargs):
         self.csr = models.CertificateSigningRequest.objects.get(
             pk=kwargs.pop('pk'))
-        bio = M2Crypto.BIO.MemoryBuffer(data=str(self.csr.data))
-        self.m2csr = M2Crypto.X509.load_request_bio(bio)
+        fd, fpath = tempfile.mkstemp()
+        with closing(os.fdopen(fd, 'r+')) as f:
+            f.write(self.csr.data)
+        self.csr_text = subprocess.check_output(
+            'openssl req -in {0} -noout -text'.format(
+                fpath).split()).replace('\t', '  ')
+        logger.debug(self.csr_text)
+        os.remove(fpath)
+        # Set up the keys
         return super(SignCSR, self).dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         data = form.cleaned_data
         years = data.get('years', 3)
         logger.debug(data)
-        pk_o = models.PrivateKey.objects.get(pk=data['private_key'])
+        issuer_id = data['issuer']
+        if issuer_id == "SELF":
+            self_signed = True
+            issuer = self.csr.m2csr.get_subject()
+            pk_o = self.csr.private_key
+        else:
+            self_signed = False
+            _crt = models.Certificate.objects.get(
+                pk=issuer_id)
+            issuer = _crt.m2_certificate.get_subject()
+            pk_o = _crt.private_key
         if pk_o.key_type != 'rsa':
             raise NotImplementedError("Only RSA keys can be used for signing"
                                       " at the moment")
-        fd, fpath = tempfile.mkstemp()
-        with closing(os.fdopen(fd, 'r+')) as f:
-            f.write(self.csr.data)
-        logger.debug(subprocess.check_output(
-            'openssl req -in {0} -noout -text'.format(fpath).split()))
-        csr = M2Crypto.X509.load_request(fpath)
-        os.remove(fpath)
-        # Set up the keys
         private_key = pk_o.get_m2_key()
-        public_key = csr.get_pubkey()
+        public_key = self.csr.m2csr.get_pubkey()
         logger.debug(public_key)
         logger.debug(private_key)
-        logger.debug(csr)
         # Calculate validity period
         t_start = long(time.time()) + time.timezone
         t_end = t_start + 86400 * 365 * years
@@ -225,7 +248,6 @@ class SignCSR(FormViewWithUser):
         valid_from.set_time(t_start)
         valid_until = M2Crypto.ASN1.ASN1_UTCTIME()
         valid_until.set_time(t_end)
-        issuer = csr.get_subject()
         # Set serial number both for certificate and the CA
         ca_serial, _ = models.CASerial.objects.get_or_create(
             subject=issuer.as_text())
@@ -239,19 +261,15 @@ class SignCSR(FormViewWithUser):
         certificate.set_not_after(valid_until)
         certificate.set_pubkey(public_key)
         certificate.set_issuer(issuer)
-        certificate.set_subject(issuer)
+        certificate.set_subject(self.csr.m2csr.get_subject())
         certificate.sign(private_key, md='sha1')
         # M2Crypto Certificate is all set up, let's make a model instance out
         # of it
         crt = models.Certificate()
-        try:
-            owner = models.User.objects.get(dn=certificate.get_subject().as_text())
-        except models.User.DoesNotExist:
-            owner = None
-        crt.owner = owner
-        crt.issuer = None
+        crt.owner = self.csr.owner
         crt.data = certificate.as_pem()
-        crt.private_key = pk_o
+        if self_signed:
+            crt.private_key = pk_o
         crt.save()
         # and finally mark the CSR as processed
         self.csr.status = "signed"
@@ -260,14 +278,15 @@ class SignCSR(FormViewWithUser):
         return super(SignCSR, self).form_valid(form)
 
     def get_context_data(self, **kwargs):
-        ctx =  super(SignCSR, self).get_context_data(**kwargs)
+        ctx = super(SignCSR, self).get_context_data(**kwargs)
+        ctx['csr_text'] = self.csr_text
         ctx["button_text"] = "Certify"
         return ctx
 
     def get_form_kwargs(self):
         kw = super(SignCSR, self).get_form_kwargs()
-        kw['subject'] = self.m2csr.get_subject().as_text()
-        kw['public_key'] = self.m2csr.get_pubkey()
+        kw['user'] = self.request.user
+        kw['private_key'] = self.csr.private_key
         return kw
 
 
@@ -277,15 +296,14 @@ class UploadCSR(FormView):
     template_name = 'fileform.html'
 
     def get_context_data(self, **kwargs):
-        ctx =  super(UploadCSR, self).get_context_data(**kwargs)
+        ctx = super(UploadCSR, self).get_context_data(**kwargs)
         ctx['button_text'] = 'Upload'
         return ctx
 
     def form_valid(self, form):
         raw_csr = form.cleaned_data['csr']
         print(raw_csr)
-        csr = models.CertificateSigningRequest(data=raw_csr,
-                                                 owner=self.request.user)
+        csr = models.CertificateSigningRequest.from_pem(data=raw_csr)
         bio = M2Crypto.BIO.MemoryBuffer(data=raw_csr)
         req = M2Crypto.X509.load_request_bio(bio)
         csr.subject = req.get_subject().as_text()

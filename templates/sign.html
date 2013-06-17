@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="row">
+        <div class="span12">
+                <pre>{{ csr_text }}</pre>
+            <form class="form-horizontal well" method="post" action=".">
+                <fieldset>
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-primary">
+                        {{ button_text }}</button>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+    <script type="text/javascript">
+        $('form').jsform();
+    </script>
+{% endblock %}

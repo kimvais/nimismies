@@ -72,22 +72,20 @@ class CSR(PrivateKeySelectionForm):
         self.fields['subject'].initial = self.user.dn
 
 
-class SignCSR(PrivateKeySelectionForm):
+class SignCSR(forms.Form):
+    issuer = forms.ChoiceField(choices=(None,))
+
     def __init__(self, *args, **kwargs):
         choices = list()
-        subject = kwargs.pop('subject')
-        public_key = kwargs.pop('public_key')
-        try:
-            private_key = models.PrivateKey.objects.get(public_key=public_key)
-        except models.PrivateKey.DoesNotExist:
-            private_key = None
+        private_key = kwargs.pop('private_key', None)
+        user = kwargs.pop('user', None)
         if private_key is not None:
-            choices.append((private_key.pk, "Self-signed"))
-        choices.extend((cert.private_key_id, cert.pk)
+            choices.append(('SELF', "Self-signed"))
+        choices.extend((cert.pk, str(cert))
                        for cert in models.Certificate.objects.exclude(
-            private_key=None))
+            private_key=None).filter(owner=user))
         super(SignCSR, self).__init__(*args, **kwargs)
-        self.fields['private_key'].choices = choices
+        self.fields['issuer'].choices = choices
 
 
 class CSRUpload(forms.Form):

@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from django.conf.urls import patterns, include, url
+from django.conf.urls import patterns, url
 from django.contrib.auth.views import login
 from django.contrib.auth.decorators import login_required
 from django.views.generic import RedirectView
@@ -41,7 +41,11 @@ urlpatterns = patterns(
         name='upload_csr'),
     url(r'^sign/(?P<pk>\d+)/', login_required(views.SignCSR.as_view()),
         name='sign_csr'),
-    url(r'^list/(?P<choice>[a-z_]+)/?',
-        login_required(views.ObjectList.as_view()), name="list"),
+    url(r'^list/(?P<choice>csr)/?', login_required(views.CSRList.as_view()),
+        name="list"),
+    url(r'^list/(?P<choice>private_key)/?',
+        login_required(views.PrivateKeyList.as_view()), name="list"),
+    url(r'^list/(?P<choice>certificate)/?',
+        login_required(views.CertificateList.as_view()), name="list"),
     # url(r'^nimismies/', include('nimismies.foo.urls')),
 )

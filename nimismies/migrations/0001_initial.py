@@ -24,7 +24,6 @@ class Migration(SchemaMigration):
             ('owner', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['nimismies.User'])),
             ('data', self.gf('nimismies.fields.EncryptedCharField')('SECRET_KEY', 8192, null=False)),
             ('public_key', self.gf('django.db.models.fields.TextField')()),
-            ('bits', self.gf('django.db.models.fields.IntegerField')()),
             ('key_type', self.gf('django.db.models.fields.CharField')(max_length=16)),
             ('created', self.gf('django.db.models.fields.DateTimeField')(default=datetime.datetime.utcnow)),
         ))
@@ -44,7 +43,7 @@ class Migration(SchemaMigration):
         # Adding model 'CertificateSigningRequest'
         db.create_table(u'nimismies_certificatesigningrequest', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('owner', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['nimismies.User'])),
+            ('owner', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['nimismies.User'], null=True)),
             ('created', self.gf('django.db.models.fields.DateTimeField')(default=datetime.datetime.utcnow)),
             ('data', self.gf('django.db.models.fields.TextField')()),
             ('subject', self.gf('django.db.models.fields.CharField')(max_length=1024)),
@@ -100,14 +99,13 @@ class Migration(SchemaMigration):
             'created': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.utcnow'}),
             'data': ('django.db.models.fields.TextField', [], {}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'owner': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['nimismies.User']"}),
+            'owner': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['nimismies.User']", 'null': 'True'}),
             'private_key': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['nimismies.PrivateKey']", 'null': 'True'}),
             'status': ('django.db.models.fields.CharField', [], {'default': "'new'", 'max_length': '32'}),
             'subject': ('django.db.models.fields.CharField', [], {'max_length': '1024'})
         },
         u'nimismies.privatekey': {
             'Meta': {'object_name': 'PrivateKey'},
-            'bits': ('django.db.models.fields.IntegerField', [], {}),
             'created': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.utcnow'}),
             'data': ('nimismies.fields.EncryptedCharField', ["'SECRET_KEY'", '8192'], {'null': 'False'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),

@@ -86,8 +86,12 @@ class PrivateKey(models.Model):
         return key
 
     def __unicode__(self):
-        return '{bits}-bit {key_type} key #{id} for <{0}>'.format(
-            self.owner, **self.__dict__)
+        try:
+            return '{bits}-bit {key_type} key #{id} for <{owner}>'.format(
+                owner=self.owner, bits=self.bits, id=self.pk,
+                key_type=self.key_type)
+        except:
+            return "Private Key #" + str(self.pk)
 
     def __init__(self, *args, **kwargs):
         super(PrivateKey, self).__init__(*args, **kwargs)
@@ -106,18 +110,17 @@ class Certificate(models.Model):
     private_key = models.ForeignKey('nimismies.PrivateKey', null=True)
 
     def __unicode__(self):
-        if self._issuer is None:
-            issuer = self.owner.dn
-        else:
-            issuer = self._issuer.dn
-        return '{0} signed by {1}'.format(self.owner.dn, issuer)
+        return '{0} signed by {1}'.format(self.subject, self.issuer)
 
     def get_m2_certificate(self):
         return M2Crypto.X509.load_cert_string(str(self.data))
 
     def __init__(self, *args, **kwargs):
         super(Certificate, self).__init__(*args, **kwargs)
-        self.m2_certificate = self.get_m2_certificate()
+        if self.data:
+            self.m2_certificate = self.get_m2_certificate()
+        else:
+            self.m2_certificate = None
 
     @property
     def issuer(self):
@@ -146,13 +149,37 @@ class Certificate(models.Model):
 
 
 class CertificateSigningRequest(models.Model):
-    owner = models.ForeignKey('nimismies.User')
+    owner = models.ForeignKey('nimismies.User', null=True)
     created = models.DateTimeField(default=datetime.datetime.utcnow)
     data = models.TextField(null=False)
     subject = models.CharField(max_length=1024)
     status = models.CharField(max_length=32, default="new")
     private_key = models.ForeignKey('nimismies.PrivateKey', null=True)
 
+    def __init__(self, *args, **kwargs):
+        super(CertificateSigningRequest, self).__init__(*args, **kwargs)
+        if self.data:
+            bio = M2Crypto.BIO.MemoryBuffer(data=str(self.data))
+            self.m2csr = M2Crypto.X509.load_request_bio(bio)
+            self.subject = self.m2csr.get_subject().as_text()
+
+    @classmethod
+    def from_pem(cls, data):
+        self = cls()
+        self.data = data
+        bio = M2Crypto.BIO.MemoryBuffer(data=str(self.data))
+        self.m2csr = M2Crypto.X509.load_request_bio(bio)
+        self.subject = self.m2csr.get_subject().as_text()
+        return self
+
+    @property
+    def public_key(self):
+        return self.m2csr.get_pubkey().as_pem()
+
+    @classmethod
+    def from_pem(cls, data):
+        csr = cls(data=data)
+        return csr
 
 class CASerial(models.Model):
     subject = models.CharField(max_length=1024, unique=True)
