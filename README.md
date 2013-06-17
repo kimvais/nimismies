@@ -8,6 +8,9 @@ This project aims to be easy-to-deploy certificate authority (CA) with a web bas
 
 1. `git clone git://github.com/kimvais/nimismies.git`
 1. `cd nimismies`
+1. `make setup`
+
+Make setup does the following:
 1. `createdb nimismies`
 1. `python manage.py syncdb`
 1. `python manage.py migrate nimismies`
@@ -15,12 +18,23 @@ This project aims to be easy-to-deploy certificate authority (CA) with a web bas
 
 ## Features
 
-* None for the time being, really
+At the moment _nimismies_ is a minimally functional Certificate authority.
+
+You can:
+
+* Create CA keys (RSA only)
+* Create CSRs for CA keys
+* Generate self-signed certificates
+* Upload CSRs
+* Sign CSR using CA keys
+* Download certificates
+
+### TODO ###
 
 In addition to the basic CA functionality (issuing Certificates!) I plan on
 adding support for OSCP, SCEP and HSMs.
 
-### Versioning
+## Versioning
 
 Version number is stored in settings.VERSION
 
