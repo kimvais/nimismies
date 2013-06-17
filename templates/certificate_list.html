@@ -20,6 +20,9 @@
                     <th>
                         Created
                     </th>
+                    <th>
+                        Actions
+                    </th>
                 </tr>
                 </thead>
                 <tbody>
@@ -31,6 +34,11 @@
                         <td>{{ obj.subject }}</td>
                         <td>{{ obj.issuer }}</td>
                         <td>{{ obj.created.isoformat }}</td>
+                        <td><a
+                                href="{% url 'download_certificate' pk=obj.pk %}"
+                                class="btn btn-link">
+                            Download</a>
+                        <td>
                     </tr>
                 {% endfor %}
                 </tbody>

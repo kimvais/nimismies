@@ -30,6 +30,7 @@ import time
 
 from django.contrib.auth.views import logout
 from django.core.urlresolvers import reverse
+from django.http import Http404, HttpResponse
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView, View, FormView, ListView
@@ -166,6 +167,7 @@ class CreateCSR(CreateViewMixin, FormViewWithUser):
 
 class ObjectList(ListView):
     choice = None
+
     def get_template_names(self):
         return ['{0}_list.html'.format(self.choice)]
 
@@ -182,18 +184,21 @@ class ObjectList(ListView):
 
 class PrivateKeyList(ObjectList):
     choice = "private_key"
+
     def get_queryset(self):
         return models.PrivateKey.objects.filter(owner=self.request.user)
 
 
 class CertificateList(ObjectList):
     choice = "certificate"
+
     def get_queryset(self):
         return models.Certificate.objects.all()
 
 
 class CSRList(ObjectList):
     choice = "csr"
+
     def get_queryset(self):
         return models.CertificateSigningRequest.objects.exclude(
             status="signed")
@@ -310,3 +315,20 @@ class UploadCSR(FormView):
         csr.private_key = None
         csr.save()
         return super(UploadCSR, self).form_valid(form)
+
+
+class DownloadCertificate(View):
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            self.certificate = models.Certificate.objects.get(
+                pk=kwargs.pop('pk'))
+        except models.Certificate.DoesNotExist:
+            raise Http404
+        return super(DownloadCertificate, self).dispatch(request, *args,
+                                                         **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        response = HttpResponse(self.certificate.data)
+        response.content_type = 'text/plain'
+        response['Content-Disposition'] = 'attachment; certificate.pem'
+        return response
