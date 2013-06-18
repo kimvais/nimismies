@@ -26,6 +26,7 @@ import M2Crypto
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from . import fields
+from utils import generate_key_fingerprint
 
 
 class UserManager(BaseUserManager):
@@ -101,10 +102,12 @@ class PrivateKey(models.Model):
     def bits(self):
         return self.key.size() * 8
 
+
+
 class Certificate(models.Model):
     owner = models.ForeignKey('nimismies.User', null=True)
     _issuer = models.ForeignKey('nimismies.Certificate',
-                               null=True)  # null means self-signed
+                                null=True)  # null means self-signed
     data = models.TextField(null=False)
     created = models.DateTimeField(default=datetime.datetime.utcnow)
     private_key = models.ForeignKey('nimismies.PrivateKey', null=True)
@@ -147,6 +150,10 @@ class Certificate(models.Model):
         return (self.m2_certificate.get_not_before().get_datetime(),
                 self.m2_certificate.get_not_after().get_datetime())
 
+    @property
+    def key_id(self):
+        return generate_key_fingerprint(self.m2_certificate.get_pubkey().as_der())
+
 
 class CertificateSigningRequest(models.Model):
     owner = models.ForeignKey('nimismies.User', null=True)
@@ -176,10 +183,15 @@ class CertificateSigningRequest(models.Model):
     def public_key(self):
         return self.m2csr.get_pubkey().as_pem()
 
+    @property
+    def key_id(self):
+        return generate_key_fingerprint(self.m2csr.get_pubkey().as_der())
+
     @classmethod
     def from_pem(cls, data):
         csr = cls(data=data)
         return csr
+
 
 class CASerial(models.Model):
     subject = models.CharField(max_length=1024, unique=True)

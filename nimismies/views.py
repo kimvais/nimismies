@@ -38,6 +38,7 @@ import M2Crypto
 
 from jsforms.decorators import jsform
 from nimismies import forms, models
+from utils import new_extension
 
 
 logger = logging.getLogger(__name__)
@@ -236,10 +237,10 @@ class SignCSR(FormViewWithUser):
             email = pk_o.owner.email
         else:
             self_signed = False
-            _crt = models.Certificate.objects.get(
+            issuing_crt = models.Certificate.objects.get(
                 pk=issuer_id)
-            issuer = _crt.m2_certificate.get_subject()
-            pk_o = _crt.private_key
+            issuer = issuing_crt.m2_certificate.get_subject()
+            pk_o = issuing_crt.private_key
             email = None
         if pk_o.key_type != 'rsa':
             raise NotImplementedError("Only RSA keys can be used for signing"
@@ -271,22 +272,29 @@ class SignCSR(FormViewWithUser):
         certificate.set_subject(self.csr.m2csr.get_subject())
         # add extensions:
         if data['ca']:
-            ext = M2Crypto.X509.new_extension(
+            certificate.add_ext(M2Crypto.X509.new_extension(
                 'basicConstraints',
                 'CA:TRUE',
-                critical=1)
-            certificate.add_ext(ext)
+                critical=1))
         val = ', '.join(data['key_usage_extensions'])
         logger.debug(val)
-        ext = M2Crypto.X509.new_extension(
+        certificate.add_ext(M2Crypto.X509.new_extension(
             'keyUsage',
             val,
-            critical=1)
-        certificate.add_ext(ext)
+            critical=1))
         if email is not None:
-            ext = M2Crypto.X509.new_extension('subjectAltName',
-                                              'email:{0}'.format(email))
-        certificate.add_ext(ext)
+            certificate.add_ext(M2Crypto.X509.new_extension('subjectAltName',
+                                                            'email:{0}'.format(
+                                                                email)))
+        certificate.add_ext(M2Crypto.X509.new_extension(
+            'subjectKeyIdentifier',
+            self.csr.key_id))
+        if not self_signed:
+            authority_id = 'keyid,issuer:always'
+            logger.debug(authority_id)
+            certificate.add_ext(new_extension(
+                'authorityKeyIdentifier',
+                authority_id, issuer=issuing_crt.m2_certificate))
         certificate.sign(private_key, md='sha1')
         # M2Crypto Certificate is all set up, let's make a model instance out
         # of it
@@ -299,8 +307,7 @@ class SignCSR(FormViewWithUser):
         # and finally mark the CSR as processed
         self.csr.status = "signed"
         self.csr.save()
-
-        return super(SignCSR, self).form_valid(form)
+        return redirect(self.success_url)
 
     def get_context_data(self, **kwargs):
         ctx = super(SignCSR, self).get_context_data(**kwargs)
