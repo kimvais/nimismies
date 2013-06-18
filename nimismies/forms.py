@@ -28,6 +28,30 @@ import M2Crypto
 from django import forms
 from nimismies import models
 
+X500_FIELDS = (
+    ('CN', 'commonName'),
+    ('L', 'localityName'),
+    ('ST', 'stateOrProvinceName'),
+    ('O', 'organizationName'),
+    ('OU', 'organizationalUnitName'),
+    ('C', 'countryName'),
+    ('STREET', 'streetAddress'),
+    ('DC', 'domainComponent'),
+    ('UID', 'userid'),
+)
+
+KEYUSAGE_EXTENSIONS = (
+    (('digitalSignature' ,'Digital Signature'), True),
+    (('nonRepudiation' ,'Non Repudiation'), True),
+    (('keyEncipherment' ,'Key Encipherment'), True),
+    (('dataEncipherment' ,'Data Encipherment'), True),
+    (('keyAgreement' ,'Key Agreement'), True),
+    (('keyCertSign','Certificate Sign'), True),
+    (('cRLSign' ,'CRL Sign'), True),
+    (('encipherOnly' ,'Encipher Only'), False),
+    (('decipherOnly' , 'Decipher Only'), False),
+)
+
 
 class PrivateKey(forms.Form):
     key_type = forms.ChoiceField(choices=(
@@ -86,6 +110,20 @@ class SignCSR(forms.Form):
             private_key=None).filter(owner=user))
         super(SignCSR, self).__init__(*args, **kwargs)
         self.fields['issuer'].choices = choices
+        for (ext, label), initial in KEYUSAGE_EXTENSIONS:
+            self.fields['key_usage_ext_{0}'.format(ext)] = forms.BooleanField(
+                initial=initial,
+                label=label,
+                required=False)
+
+    def clean(self):
+        data = dict(key_usage_extensions=list())
+        for k, v in self.cleaned_data.items():
+            if k.startswith('key_usage_ext_') and v:
+                data['key_usage_extensions'].append(k[14:])
+            else:
+                data[k] = v
+        return data
 
 
 class CSRUpload(forms.Form):

@@ -233,12 +233,14 @@ class SignCSR(FormViewWithUser):
             self_signed = True
             issuer = self.csr.m2csr.get_subject()
             pk_o = self.csr.private_key
+            email = pk_o.owner.email
         else:
             self_signed = False
             _crt = models.Certificate.objects.get(
                 pk=issuer_id)
             issuer = _crt.m2_certificate.get_subject()
             pk_o = _crt.private_key
+            email = None
         if pk_o.key_type != 'rsa':
             raise NotImplementedError("Only RSA keys can be used for signing"
                                       " at the moment")
@@ -267,6 +269,19 @@ class SignCSR(FormViewWithUser):
         certificate.set_pubkey(public_key)
         certificate.set_issuer(issuer)
         certificate.set_subject(self.csr.m2csr.get_subject())
+        # add extensions:
+
+        val = ', '.join(data['key_usage_extensions'])
+        logger.debug(val)
+        ext1 = M2Crypto.X509.new_extension(
+            'keyUsage',
+            val,
+            critical=1)
+        certificate.add_ext(ext1)
+        if email is not None:
+            ext2 = M2Crypto.X509.new_extension('subjectAltName',
+                                              'email:{0}'.format(email))
+        certificate.add_ext(ext2)
         certificate.sign(private_key, md='sha1')
         # M2Crypto Certificate is all set up, let's make a model instance out
         # of it
