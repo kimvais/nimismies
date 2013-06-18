@@ -11,6 +11,7 @@ This project aims to be easy-to-deploy certificate authority (CA) with a web bas
 1. `make setup`
 
 Make setup does the following:
+
 1. `createdb nimismies`
 1. `python manage.py syncdb`
 1. `python manage.py migrate nimismies`
@@ -33,6 +34,9 @@ You can:
 
 In addition to the basic CA functionality (issuing Certificates!) I plan on
 adding support for OSCP, SCEP and HSMs.
+
+Full project status is at
+https://trello.com/board/nimismies/51bfeea6c1d27beb570022a3
 
 ## Versioning
 
