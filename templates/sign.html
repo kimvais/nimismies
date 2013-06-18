@@ -1,18 +1,56 @@
 {% extends 'base.html' %}
 {% block content %}
-    <div class="row">
+    <div class="row-fluid">
         <div class="span12">
-                <pre>{{ csr_text }}</pre>
-            <form class="form-horizontal well" method="post" action=".">
-                <fieldset>
-                    {% csrf_token %}
-                    {{ form.as_p }}
-                    <button type="submit" class="btn btn-primary">
-                        {{ button_text }}</button>
-                </fieldset>
-            </form>
+
+            <pre>{{ csr_text }}</pre>
         </div>
     </div>
+    <form class="form-horizontal well" method="post" action=".">
+        {% csrf_token %}
+        <div class="row-fluid">
+            <div class="span4">
+                <fieldset>
+                    <legend>Issuer</legend>
+
+                    {% for field in form.fieldsets.issuer %}
+                        <div class="control-group">
+                            {{ field.errors }}
+                            {{ field.label_tag }} {{ field }}
+                        </div>
+                    {% endfor %}
+                </fieldset>
+            </div>
+            <div class="span4">
+                <fieldset>
+                    <legend>Basic constraints</legend>
+                    {% for field in form.fieldsets.basic_constraints %}
+                        <div class="control-group">
+                            {{ field.errors }}
+                            {{ field.label_tag }} {{ field }}
+                        </div>
+                    {% endfor %}
+                </fieldset>
+            </div>
+            <div class="span4">
+                <fieldset>
+                    <legend>Key usage</legend>
+                    {% for field in form.fieldsets.key_usage %}
+                        <div class="control-group">
+                            {{ field.errors }}
+                            {{ field.label_tag }} {{ field }}
+                        </div>
+                    {% endfor %}
+                </fieldset>
+            </div>
+        </div>
+        <div class="row-fluid">
+            <div class="span2 offset10">
+                <button type="submit" class="btn btn-primary">
+                    {{ button_text }}</button>
+            </div>
+        </div>
+    </form>
     <script type="text/javascript">
         $('form').jsform();
     </script>
