@@ -146,4 +146,4 @@ AUTH_USER_MODEL = 'nimismies.User'
 LOGIN_URL = '/login'
 LOGIN_REDIRECT_URL = '/'
 TEMPLATE_CONTEXT_PROCESSORS = ['nimismies.context_processors.nimismies',]
-VERSION = '0.0.5'
+VERSION = '0.0.6'

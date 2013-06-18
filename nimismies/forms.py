@@ -19,6 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+from collections import defaultdict
 from contextlib import closing
 import os
 import tempfile
@@ -98,6 +99,7 @@ class CSR(PrivateKeySelectionForm):
 
 class SignCSR(forms.Form):
     issuer = forms.ChoiceField(choices=(None,))
+    ca = forms.BooleanField(required=False, label="Certificate authority")
 
     def __init__(self, *args, **kwargs):
         choices = list()
@@ -110,11 +112,19 @@ class SignCSR(forms.Form):
             private_key=None).filter(owner=user))
         super(SignCSR, self).__init__(*args, **kwargs)
         self.fields['issuer'].choices = choices
+        # Do the magic to be able to group the fields properly in the template
+        self.fieldsets = defaultdict(list)
         for (ext, label), initial in KEYUSAGE_EXTENSIONS:
-            self.fields['key_usage_ext_{0}'.format(ext)] = forms.BooleanField(
+            fieldname = 'key_usage_ext_{0}'.format(ext)
+            self.fields[fieldname] = forms\
+                .BooleanField(
                 initial=initial,
                 label=label,
                 required=False)
+            self.fieldsets['key_usage'].append(self.__getitem__(
+                fieldname))
+        self.fieldsets['issuer'].append(self.__getitem__('issuer'))
+        self.fieldsets['basic_constraints'].append(self.__getitem__('ca'))
 
     def clean(self):
         data = dict(key_usage_extensions=list())

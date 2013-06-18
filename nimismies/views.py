@@ -270,18 +270,23 @@ class SignCSR(FormViewWithUser):
         certificate.set_issuer(issuer)
         certificate.set_subject(self.csr.m2csr.get_subject())
         # add extensions:
-
+        if data['ca']:
+            ext = M2Crypto.X509.new_extension(
+                'basicConstraints',
+                'CA:TRUE',
+                critical=1)
+            certificate.add_ext(ext)
         val = ', '.join(data['key_usage_extensions'])
         logger.debug(val)
-        ext1 = M2Crypto.X509.new_extension(
+        ext = M2Crypto.X509.new_extension(
             'keyUsage',
             val,
             critical=1)
-        certificate.add_ext(ext1)
+        certificate.add_ext(ext)
         if email is not None:
-            ext2 = M2Crypto.X509.new_extension('subjectAltName',
+            ext = M2Crypto.X509.new_extension('subjectAltName',
                                               'email:{0}'.format(email))
-        certificate.add_ext(ext2)
+        certificate.add_ext(ext)
         certificate.sign(private_key, md='sha1')
         # M2Crypto Certificate is all set up, let's make a model instance out
         # of it
