@@ -33,8 +33,11 @@ from django.core.urlresolvers import reverse
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView, View, FormView, ListView, DetailView
 import M2Crypto
+from pyasn1.codec.der import decoder as der_decoder
+from pyasn1_modules import rfc2560
 
 from jsforms.decorators import jsform
 from nimismies import forms, models
@@ -264,7 +267,7 @@ class SignCSR(FormViewWithUser):
         serial = ca_serial.serial_number
         # Generate the actual certificate
         certificate = M2Crypto.X509.X509()
-        certificate.set_version(serial)
+        certificate.set_serial_number(serial)
         certificate.set_not_before(valid_from)
         certificate.set_not_after(valid_until)
         certificate.set_pubkey(public_key)
@@ -296,6 +299,10 @@ class SignCSR(FormViewWithUser):
                 'authorityKeyIdentifier',
                 authority_id, issuer=issuing_crt.m2_certificate))
         certificate.sign(private_key, md='sha1')
+        # TODO: Configure OCSP distribution point, and save it here.
+        certificate.add_ext(M2Crypto.X509.new_extension(
+            'authorityInfoAccess', 'OCSP;URI:http://localhost:8000/ocsp/'
+        ))
         # M2Crypto Certificate is all set up, let's make a model instance out
         # of it
         crt = models.Certificate()
@@ -364,3 +371,18 @@ class DownloadCertificate(View):
 class Certificate(DetailView):
     template_name = "certificate_detail.html"
     model = models.Certificate
+
+
+class OCSP(View):
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super(OCSP, self).dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        data = request.body
+        print(['{0:x}'.format(ord(x)) for x in data])
+        print( der_decoder.decode(data))
+        ocsp_request = der_decoder.decode(data, asn1Spec=rfc2560.OCSPRequest)
+        logger.debug(ocsp_request)
+        response = HttpResponse()
+        return response

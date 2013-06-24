@@ -53,5 +53,6 @@ urlpatterns = patterns(
     url(r'^certificate/(?P<pk>\d+)/?',
         login_required(views.Certificate.as_view()),
         name="certificate"),
+    url(r'ocsp/?', views.OCSP.as_view(), name="ocsp"),
     # url(r'^nimismies/', include('nimismies.foo.urls')),
 )
