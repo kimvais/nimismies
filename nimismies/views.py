@@ -268,6 +268,7 @@ class SignCSR(FormViewWithUser):
         # Generate the actual certificate
         certificate = M2Crypto.X509.X509()
         certificate.set_serial_number(serial)
+        certificate.set_version(2)
         certificate.set_not_before(valid_from)
         certificate.set_not_after(valid_until)
         certificate.set_pubkey(public_key)
@@ -299,10 +300,11 @@ class SignCSR(FormViewWithUser):
                 'authorityKeyIdentifier',
                 authority_id, issuer=issuing_crt.m2_certificate))
         certificate.sign(private_key, md='sha1')
-        # TODO: Configure OCSP distribution point, and save it here.
-        certificate.add_ext(M2Crypto.X509.new_extension(
-            'authorityInfoAccess', 'OCSP;URI:http://localhost:8000/ocsp/'
-        ))
+        if not self_signed:
+            # TODO: Configure OCSP distribution point, and save it here.
+            certificate.add_ext(M2Crypto.X509.new_extension(
+                'authorityInfoAccess', 'OCSP;URI:http://localhost:8000/ocsp/'
+            ))
         # M2Crypto Certificate is all set up, let's make a model instance out
         # of it
         crt = models.Certificate()
